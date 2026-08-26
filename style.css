@@ -1169,6 +1169,85 @@ input:focus, select:focus {
   margin-top: 2px;
 }
 
+.rubrica-contatore-num-danger {
+  color: var(--accent-rose);
+}
+
+/* Sezione "Pazienti Inattivi": riga toggle collassabile sotto la lista principale
+   della rubrica + griglia delle card, nascosta finché non c'è almeno un inattivo */
+.rubrica-inattivi-section {
+  border-top: 1.5px solid var(--border-light);
+  padding: 0 32px;
+}
+
+.rubrica-inattivi-toggle {
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  padding: 16px 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: color 0.2s ease;
+}
+
+.rubrica-inattivi-toggle:hover {
+  color: var(--accent-rose);
+}
+
+.rubrica-inattivi-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 16px;
+  padding-bottom: 24px;
+}
+
+.rubrica-patient-card-inattivo {
+  opacity: 0.7;
+}
+
+.rubrica-patient-card-inattivo:hover {
+  opacity: 1;
+}
+
+.rpc-inattivo-badge {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 2px 8px;
+  font-size: 10px;
+  font-weight: 700;
+  color: white;
+  background: var(--text-tertiary);
+  border-radius: 999px;
+  vertical-align: middle;
+}
+
+.rpc-reactivate-btn {
+  background: var(--bg-lighter);
+  border: 1.5px solid var(--border-light);
+  border-radius: 10px;
+  width: 40px;
+  height: 40px;
+  font-size: 16px;
+  cursor: pointer;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.rpc-reactivate-btn:hover {
+  background: var(--accent-emerald);
+  border-color: var(--accent-emerald);
+  transform: scale(1.08);
+}
+
 /* ═══════════════════════════════════════════════════════════════════════════
    PDF PREVIEW SECTION (A4 Pages)
 ═══════════════════════════════════════════════════════════════════════════ */

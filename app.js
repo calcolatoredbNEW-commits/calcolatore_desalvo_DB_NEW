@@ -338,6 +338,7 @@ function initEventListeners() {
   document.getElementById('btn-close-rubrica')?.addEventListener('click', chiudiRubricaBanner);
   document.getElementById('btn-backup-db')?.addEventListener('click', scaricaBackupDatabase);
   document.getElementById('rubrica-search-input')?.addEventListener('input', filtraPazientiInRubrica);
+  document.getElementById('rubrica-inattivi-toggle')?.addEventListener('click', toggleSezioneInattivi);
 
   document.getElementById('btn-salva-visita')?.addEventListener('click', salvaVisita);
   document.getElementById('btn-elimina-visita')?.addEventListener('click', eliminaVisitaCorrente);
@@ -369,7 +370,7 @@ function initEventListeners() {
   document.getElementById('modal-edit-overlay')?.addEventListener('click', chiudiModalEditPaziente);
   document.getElementById('btn-cancel-edit')?.addEventListener('click', chiudiModalEditPaziente);
   document.getElementById('btn-save-edit-paziente')?.addEventListener('click', salvaModifichePatient);
-  document.getElementById('btn-delete-paziente')?.addEventListener('click', eliminaPaziente);
+  document.getElementById('btn-delete-paziente')?.addEventListener('click', archiviaPaziente);
 }
 
 function chiudiModale() {
@@ -383,6 +384,12 @@ function chiudiModalEditPaziente() {
   document.getElementById('modal-edit-paziente')?.classList.add('hidden');
 }
 
+// Ricordata tra un'apertura e l'altra della rubrica: se il dottore ha aperto la
+// sezione "Pazienti Inattivi", richiudersi da sola a ogni ricarica sarebbe fastidioso
+// solo nel mezzo di una sessione di ricerca — per questo viene resettata a "chiusa"
+// solo quando si riapre la rubrica da zero (vedi apriRubricaBanner)
+let rubricaInattiviEspanso = false;
+
 async function apriRubricaBanner() {
   document.getElementById('banner-rubrica').classList.remove('hidden');
   document.getElementById('rubrica-search-input').value = '';
@@ -392,7 +399,8 @@ async function apriRubricaBanner() {
     const { data, error } = await sbClient.from('pazienti').select('*').order('nominativo', { ascending: true });
     if (error) throw error;
     allPatientsCache = data;
-    renderListaPazientiRubrica(allPatientsCache);
+    rubricaInattiviEspanso = false;
+    aggiornaListeRubrica(allPatientsCache);
     aggiornaContatoriRubrica(allPatientsCache);
 
     // Evidenzia e porta in vista il paziente attualmente selezionato, se presente
@@ -403,27 +411,67 @@ async function apriRubricaBanner() {
   } catch (err) { console.error(err); }
 }
 
-// Calcola e mostra nell'header della rubrica il numero totale di pazienti e la
-// suddivisione per sesso. Chiamata ogni volta che la lista pazienti viene ricaricata
-// (apertura rubrica, dopo aggiunta/modifica/eliminazione), NON quando si filtra con la
-// barra di ricerca: i contatori mostrano sempre il totale reale, non il filtrato.
+// Calcola e mostra nell'header della rubrica il numero di pazienti attivi (Totale/Uomini/
+// Donne) e il numero di inattivi. Chiamata ogni volta che la lista pazienti viene
+// ricaricata (apertura rubrica, dopo aggiunta/modifica/archiviazione/riattivazione), NON
+// quando si filtra con la barra di ricerca: i contatori mostrano sempre il totale reale
+// di TUTTI i pazienti (attivi+inattivi), non solo quelli visibili col filtro.
 function aggiornaContatoriRubrica(lista) {
   const elTotale = document.getElementById('contatore-totale');
   const elUomini = document.getElementById('contatore-uomini');
   const elDonne = document.getElementById('contatore-donne');
+  const elInattivi = document.getElementById('contatore-inattivi');
   if (!elTotale || !elUomini || !elDonne) return;
 
-  const totale = lista.length;
-  const uomini = lista.filter(p => p.sesso === 'M').length;
-  const donne = lista.filter(p => p.sesso === 'F').length;
+  const attivi = lista.filter(p => p.attivo !== false);
+  const inattivi = lista.filter(p => p.attivo === false);
 
-  elTotale.textContent = totale;
-  elUomini.textContent = uomini;
-  elDonne.textContent = donne;
+  elTotale.textContent = attivi.length;
+  elUomini.textContent = attivi.filter(p => p.sesso === 'M').length;
+  elDonne.textContent = attivi.filter(p => p.sesso === 'F').length;
+  if (elInattivi) elInattivi.textContent = inattivi.length;
 }
 
 function chiudiRubricaBanner() {
   document.getElementById('banner-rubrica').classList.add('hidden');
+}
+
+// Divide la lista (già eventualmente filtrata dalla ricerca) in attivi/inattivi e
+// aggiorna entrambe le sotto-liste della rubrica in un colpo solo. La sezione "Pazienti
+// Inattivi" resta nascosta del tutto se non esiste nessun inattivo nell'intera rubrica
+// (non solo nel filtro corrente); se invece la ricerca trova un match SOLO tra gli
+// inattivi, la sezione si espande da sola per non nascondere il risultato.
+function aggiornaListeRubrica(lista, isFiltro = false) {
+  const attivi = lista.filter(p => p.attivo !== false);
+  const inattivi = lista.filter(p => p.attivo === false);
+  const totaleInattiviReale = allPatientsCache.filter(p => p.attivo === false).length;
+
+  renderListaPazientiRubrica(attivi);
+  renderListaPazientiInattivi(inattivi);
+
+  const sezione = document.getElementById('rubrica-inattivi-section');
+  if (sezione) sezione.classList.toggle('hidden', totaleInattiviReale === 0);
+
+  const elCount = document.getElementById('rubrica-inattivi-count');
+  if (elCount) elCount.textContent = inattivi.length;
+
+  // Espande da sola la sezione se una ricerca trova risultati tra gli inattivi (altrimenti
+  // resterebbero invisibili dietro al toggle chiuso), oppure se non esiste più nessun
+  // paziente attivo (non c'è nulla da nascondere sopra)
+  if (inattivi.length > 0 && (isFiltro || attivi.length === 0)) rubricaInattiviEspanso = true;
+  aggiornaVisibilitaSezioneInattivi();
+}
+
+function aggiornaVisibilitaSezioneInattivi() {
+  const container = document.getElementById('rubrica-inattivi-container');
+  const arrow = document.getElementById('rubrica-inattivi-arrow');
+  if (container) container.classList.toggle('hidden', !rubricaInattiviEspanso);
+  if (arrow) arrow.textContent = rubricaInattiviEspanso ? '▾' : '▸';
+}
+
+function toggleSezioneInattivi() {
+  rubricaInattiviEspanso = !rubricaInattiviEspanso;
+  aggiornaVisibilitaSezioneInattivi();
 }
 
 function renderListaPazientiRubrica(lista) {
@@ -476,10 +524,59 @@ function renderListaPazientiRubrica(lista) {
   });
 }
 
+// Card dei pazienti archiviati: stesso stile delle card attive ma non selezionabili
+// direttamente (nessun listener di selezione) — per tornare a lavorarci va prima
+// premuto "Riattiva", così non si aggiunge per sbaglio una visita a uno storico chiuso
+function renderListaPazientiInattivi(lista) {
+  const container = document.getElementById('rubrica-inattivi-container');
+  if (!container) return;
+  if (lista.length === 0) {
+    container.innerHTML = `<div class="rubrica-empty">Nessun paziente inattivo trovato.</div>`;
+    return;
+  }
+  container.innerHTML = lista.map(p => {
+    const dataNascitaF = p.data_nascita ? new Date(p.data_nascita).toLocaleDateString('it-IT') : 'Non inserita';
+    return `
+      <div class="rubrica-patient-card rubrica-patient-card-inattivo" data-id="${p.id}">
+        <div class="rpc-avatar ${p.sesso.toLowerCase()}">${p.sesso}</div>
+        <div class="rpc-details">
+          <h4>${p.nominativo}<span class="rpc-inattivo-badge">📦 Inattivo</span></h4>
+          <p>Nato/a il: <strong>${dataNascitaF}</strong></p>
+        </div>
+        <button class="rpc-reactivate-btn" type="button" title="Riattiva paziente">♻️</button>
+      </div>
+    `;
+  }).join('');
+
+  container.querySelectorAll('.rpc-reactivate-btn').forEach(btn => {
+    btn.addEventListener('click', function(e) {
+      e.stopPropagation();
+      const patientId = this.closest('.rubrica-patient-card').getAttribute('data-id');
+      riattivaPaziente(patientId);
+    });
+  });
+}
+
+async function riattivaPaziente(patientId) {
+  if (!sbClient) return;
+  try {
+    const { error } = await sbClient.from('pazienti').update({ attivo: true }).eq('id', patientId);
+    if (error) throw error;
+
+    const idx = allPatientsCache.findIndex(p => String(p.id) === String(patientId));
+    if (idx >= 0) allPatientsCache[idx].attivo = true;
+
+    aggiornaListeRubrica(allPatientsCache);
+    aggiornaContatoriRubrica(allPatientsCache);
+  } catch (err) {
+    alert('❌ Errore durante la riattivazione: ' + err.message);
+  }
+}
+
 function filtraPazientiInRubrica(e) {
   const query = e.target.value.toUpperCase().trim();
-  if (!query) { renderListaPazientiRubrica(allPatientsCache); return; }
-  renderListaPazientiRubrica(allPatientsCache.filter(p => p.nominativo.toUpperCase().includes(query)));
+  if (!query) { aggiornaListeRubrica(allPatientsCache); return; }
+  aggiornaListeRubrica(allPatientsCache.filter(p => p.nominativo.toUpperCase().includes(query)), true);
 }
 
 function apriModalModificaPaziente(patient) {
@@ -538,28 +635,28 @@ async function salvaModifichePatient() {
   }
 }
 
-async function eliminaPaziente() {
+// Archivia il paziente (soft-delete): non cancella più nulla dal database, si limita a
+// marcarlo "attivo = false". Storico e visite restano intatti e il paziente torna
+// disponibile in qualsiasi momento dalla sezione "Pazienti Inattivi" della rubrica.
+async function archiviaPaziente() {
   const patientId = document.getElementById('modal-edit-paziente').dataset.patientId;
-  const confirmDelete = confirm('⚠️ Sei sicuro di voler eliminare questo paziente? Questa azione è irreversibile.');
+  const confirmArchivia = confirm('📦 Vuoi archiviare questo paziente?\n\nVerrà spostato tra i "Pazienti Inattivi": storico e visite restano salvati e potrai riattivarlo in qualsiasi momento dalla rubrica.');
 
-  if (!confirmDelete) return;
+  if (!confirmArchivia) return;
 
   if (!sbClient) return;
 
   try {
-    // Elimina tutte le visite del paziente
-    await sbClient.from('visite').delete().eq('paziente_id', patientId);
-
-    // Elimina il paziente
-    const { error } = await sbClient.from('pazienti').delete().eq('id', patientId);
+    const { error } = await sbClient.from('pazienti').update({ attivo: false }).eq('id', patientId);
 
     if (error) throw error;
 
     chiudiModalEditPaziente();
-    alert('✅ Paziente eliminato con successo!');
+    alert('✅ Paziente archiviato. Lo trovi tra i "Pazienti Inattivi" nella rubrica.');
 
-    // Se era il paziente selezionato, resetta
-    if (currentPatient && currentPatient.id === patientId) {
+    // Se era il paziente selezionato, resetta il dashboard: un paziente archiviato
+    // non deve restare "in lavorazione" come se fosse ancora attivo
+    if (currentPatient && String(currentPatient.id) === String(patientId)) {
       currentPatient = null;
       currentVisitId = null;
       currentVisitDate = null;
