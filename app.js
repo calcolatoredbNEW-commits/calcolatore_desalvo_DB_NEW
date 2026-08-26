@@ -1848,8 +1848,49 @@ function ripristinaGrigliaDopoCattura({ gridEl, chartInstance, stileOriginale })
 function catturaCanvasChartConLarghezzaFissa(canvasEl) {
   if (!canvasEl) return null;
   const stato = forzaGrigliaDesktopPerCattura(canvasEl);
-  const imgData = canvasEl.toDataURL('image/png');
+
+  // Limita la risoluzione di cattura a un rapporto massimo di 2x rispetto alla larghezza
+  // CSS del canvas, indipendentemente dal devicePixelRatio dello schermo che genera il
+  // PDF (su telefoni/Mac Retina può arrivare a 3x): nel riquadro di stampa, largo solo
+  // ~89mm, 2x è già più che sufficiente — oltre è peso sprecato nel file finale, senza
+  // nessun guadagno visibile. La larghezza/disposizione "da desktop" forzata sopra resta
+  // invariata: qui si interviene solo sulla densità di pixel della cattura, non sul layout.
+  const RAPPORTO_MASSIMO_CATTURA = 2;
+  const cssWidth = canvasEl.clientWidth;
+  const cssHeight = canvasEl.clientHeight;
+  const rapportoAttuale = cssWidth > 0 ? canvasEl.width / cssWidth : 1;
+
+  const canvasFinale = document.createElement('canvas');
+  if (rapportoAttuale > RAPPORTO_MASSIMO_CATTURA && cssWidth > 0 && cssHeight > 0) {
+    canvasFinale.width = Math.round(cssWidth * RAPPORTO_MASSIMO_CATTURA);
+    canvasFinale.height = Math.round(cssHeight * RAPPORTO_MASSIMO_CATTURA);
+  } else {
+    canvasFinale.width = canvasEl.width;
+    canvasFinale.height = canvasEl.height;
+  }
+
+  const ctx = canvasFinale.getContext('2d');
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
+  // Sfondo violaceo pieno al posto della trasparenza del canvas originale: a schermo/nel
+  // PNG precedente era il rettangolo violaceo disegnato dietro (vedi addChartWithBackground)
+  // a lasciarsi intravedere. Il JPEG non supporta canali alpha, quindi il colore va "cucito"
+  // direttamente nei pixel per ottenere lo stesso identico risultato visivo di prima.
+  ctx.fillStyle = COLORE_VIOLETTO_PDF;
+  ctx.fillRect(0, 0, canvasFinale.width, canvasFinale.height);
+  ctx.drawImage(canvasEl, 0, 0, canvasFinale.width, canvasFinale.height);
+
+  const imgData = canvasFinale.toDataURL('image/jpeg', 0.9);
   ripristinaGrigliaDopoCattura(stato);
+
+  // LOG DIAGNOSTICO TEMPORANEO — da rimuovere una volta capito da dove viene il peso
+  // del PDF Progressione. Non modifica nulla, stampa solo dei numeri in console.
+  console.info(
+    `[DIAG PDF] ${canvasEl.id}: DPR=${window.devicePixelRatio} | nativo=${canvasEl.width}x${canvasEl.height} ` +
+    `| css=${cssWidth}x${cssHeight} | rapportoAttuale=${rapportoAttuale.toFixed(2)} ` +
+    `| catturato=${canvasFinale.width}x${canvasFinale.height} | peso≈${(imgData.length / 1024).toFixed(0)}KB`
+  );
+
   return imgData;
 }
 
@@ -2317,7 +2358,7 @@ async function scaricaPDFProgressione() {
     const dataNome = [oggi.getDate(), oggi.getMonth() + 1, dataAA].map(x => String(x).padStart(2, '0')).join('-');
     const dataFull = [oggi.getDate(), oggi.getMonth() + 1, oggi.getFullYear()].map(x => String(x).padStart(2, '0')).join('-');
     
-    const pdf = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
+    const pdf = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait', compress: true });
 
     // Genera Pagine e Grafici
     await generaHeaderProgressione(pdf, dataFull);
@@ -2791,7 +2832,7 @@ async function generaGraficiProgressione(pdf) {
           // Grafico
           const imgData = catturaCanvasChartConLarghezzaFissa(canvasEl);
           if (imgData && imgData.length > 0) {
-            pdf.addImage(imgData, 'PNG', x, y, width, height);
+            pdf.addImage(imgData, 'JPEG', x, y, width, height);
           }
           return true;
         } catch (e) {
@@ -2861,7 +2902,7 @@ async function generaGraficiProgressione(pdf) {
         
         const imgData = catturaCanvasChartConLarghezzaFissa(canvasSomma);
         if (imgData && imgData.length > 0) {
-          pdf.addImage(imgData, 'PNG', marginL, currentY, contentWidth, sommaHeight);
+          pdf.addImage(imgData, 'JPEG', marginL, currentY, contentWidth, sommaHeight);
           aggiuntaMiniDashboardBox(marginL, currentY + sommaHeight + 7, contentWidth, datiMiniDashboard['chart-somma-pliche']);
           currentY += sommaHeight + 18 + miniDashHeight;
         }
