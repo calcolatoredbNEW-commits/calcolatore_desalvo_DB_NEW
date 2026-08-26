@@ -1248,6 +1248,27 @@ input:focus, select:focus {
   transform: scale(1.08);
 }
 
+.rpc-delete-forever-btn {
+  background: var(--bg-lighter);
+  border: 1.5px solid var(--border-light);
+  border-radius: 10px;
+  width: 40px;
+  height: 40px;
+  font-size: 16px;
+  cursor: pointer;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.rpc-delete-forever-btn:hover {
+  background: var(--accent-rose);
+  border-color: var(--accent-rose);
+  transform: scale(1.08);
+}
+
 /* ═══════════════════════════════════════════════════════════════════════════
    PDF PREVIEW SECTION (A4 Pages)
 ═══════════════════════════════════════════════════════════════════════════ */

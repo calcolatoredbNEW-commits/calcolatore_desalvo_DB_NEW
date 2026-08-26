@@ -544,6 +544,7 @@ function renderListaPazientiInattivi(lista) {
           <p>Nato/a il: <strong>${dataNascitaF}</strong></p>
         </div>
         <button class="rpc-reactivate-btn" type="button" title="Riattiva paziente">♻️</button>
+        <button class="rpc-delete-forever-btn" type="button" title="Elimina definitivamente">🗑️</button>
       </div>
     `;
   }).join('');
@@ -553,6 +554,15 @@ function renderListaPazientiInattivi(lista) {
       e.stopPropagation();
       const patientId = this.closest('.rubrica-patient-card').getAttribute('data-id');
       riattivaPaziente(patientId);
+    });
+  });
+
+  container.querySelectorAll('.rpc-delete-forever-btn').forEach(btn => {
+    btn.addEventListener('click', function(e) {
+      e.stopPropagation();
+      const patientId = this.closest('.rubrica-patient-card').getAttribute('data-id');
+      const patient = lista.find(p => String(p.id) === String(patientId));
+      eliminaPazienteDefinitivamente(patientId, patient?.nominativo || 'questo paziente');
     });
   });
 }
@@ -570,6 +580,34 @@ async function riattivaPaziente(patientId) {
     aggiornaContatoriRubrica(allPatientsCache);
   } catch (err) {
     alert('❌ Errore durante la riattivazione: ' + err.message);
+  }
+}
+
+// Cancellazione VERA e propria (visite + paziente), disponibile solo dalla sezione
+// Pazienti Inattivi — un paziente va prima archiviato, solo dopo può essere eliminato
+// per sempre. Doppia rete di sicurezza: irraggiungibile dagli attivi + conferma esplicita.
+async function eliminaPazienteDefinitivamente(patientId, nominativo) {
+  const confirmDelete = confirm(
+    `⚠️ ATTENZIONE: stai per eliminare DEFINITIVAMENTE ${nominativo} e tutto il suo storico visite.\n\n` +
+    `Questa operazione NON è reversibile: a differenza dell'archiviazione, qui i dati vengono cancellati per sempre dal database.\n\n` +
+    `Continuare?`
+  );
+  if (!confirmDelete) return;
+
+  if (!sbClient) return;
+
+  try {
+    await sbClient.from('visite').delete().eq('paziente_id', patientId);
+    const { error } = await sbClient.from('pazienti').delete().eq('id', patientId);
+    if (error) throw error;
+
+    allPatientsCache = allPatientsCache.filter(p => String(p.id) !== String(patientId));
+    aggiornaListeRubrica(allPatientsCache);
+    aggiornaContatoriRubrica(allPatientsCache);
+
+    alert(`✅ ${nominativo} eliminato definitivamente.`);
+  } catch (err) {
+    alert('❌ Errore durante l\'eliminazione definitiva: ' + err.message);
   }
 }
 
