@@ -2017,15 +2017,6 @@ function catturaCanvasChartConLarghezzaFissa(canvasEl) {
 
   const imgData = canvasFinale.toDataURL('image/jpeg', 0.9);
   ripristinaGrigliaDopoCattura(stato);
-
-  // LOG DIAGNOSTICO TEMPORANEO — da rimuovere una volta capito da dove viene il peso
-  // del PDF Progressione. Non modifica nulla, stampa solo dei numeri in console.
-  console.info(
-    `[DIAG PDF] ${canvasEl.id}: DPR=${window.devicePixelRatio} | nativo=${canvasEl.width}x${canvasEl.height} ` +
-    `| css=${cssWidth}x${cssHeight} | rapportoAttuale=${rapportoAttuale.toFixed(2)} ` +
-    `| catturato=${canvasFinale.width}x${canvasFinale.height} | peso≈${(imgData.length / 1024).toFixed(0)}KB`
-  );
-
   return imgData;
 }
 
