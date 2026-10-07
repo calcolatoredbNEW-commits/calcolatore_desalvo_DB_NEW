@@ -1055,10 +1055,17 @@ input:focus, select:focus {
   box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
 }
 
+/* Unica area scorrevole della rubrica: contiene sia la lista attivi sia la sezione
+   "Pazienti Inattivi", così scorrono insieme come una sola pagina (prima la sezione
+   inattivi stava fuori dallo scroll e veniva tagliata dall'overflow: hidden) */
+.rubrica-scroll-area {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
 .rubrica-grid-list {
   padding: 28px 32px;
-  overflow-y: auto;
-  flex: 1;
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
   gap: 16px;
@@ -1147,6 +1154,7 @@ input:focus, select:focus {
   font-weight: 800;
   font-size: 16px;
   color: white;
+  flex-shrink: 0;
 }
 
 .rpc-avatar.m {
@@ -1213,6 +1221,11 @@ input:focus, select:focus {
 
 .rubrica-patient-card-inattivo:hover {
   opacity: 1;
+}
+
+/* Stessa struttura delle card attive, ma non selezionabile (va prima riattivata) */
+.rubrica-patient-card-inattivo .rubrica-patient-card-main {
+  cursor: default;
 }
 
 .rpc-inattivo-badge {

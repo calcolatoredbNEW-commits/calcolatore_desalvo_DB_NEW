@@ -421,13 +421,16 @@
       <div class="rubrica-search-wrapper">
         <input type="text" id="rubrica-search-input" placeholder="🔍 Digita il cognome o nome per filtrare la lista dei pazienti...">
       </div>
-      <div id="rubrica-patients-container" class="rubrica-grid-list"></div>
+      <!-- Unica area scorrevole per attivi + inattivi: header e ricerca restano fissi in alto -->
+      <div class="rubrica-scroll-area">
+        <div id="rubrica-patients-container" class="rubrica-grid-list"></div>
 
-      <div id="rubrica-inattivi-section" class="rubrica-inattivi-section hidden">
-        <button type="button" id="rubrica-inattivi-toggle" class="rubrica-inattivi-toggle">
-          <span id="rubrica-inattivi-arrow">▸</span> Pazienti Inattivi (<span id="rubrica-inattivi-count">0</span>)
-        </button>
-        <div id="rubrica-inattivi-container" class="rubrica-inattivi-list hidden"></div>
+        <div id="rubrica-inattivi-section" class="rubrica-inattivi-section hidden">
+          <button type="button" id="rubrica-inattivi-toggle" class="rubrica-inattivi-toggle">
+            <span id="rubrica-inattivi-arrow">▸</span> Pazienti Inattivi (<span id="rubrica-inattivi-count">0</span>)
+          </button>
+          <div id="rubrica-inattivi-container" class="rubrica-inattivi-list hidden"></div>
+        </div>
       </div>
     </div>
   </div>
@@ -467,6 +470,6 @@
     </div>
   </div>
 
-  <script src="app.js?v=7.5" defer></script>
+  <script src="app.js?v=7.6" defer></script>
 </body>
 </html>

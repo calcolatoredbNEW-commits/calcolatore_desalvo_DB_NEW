@@ -538,10 +538,12 @@ function renderListaPazientiInattivi(lista) {
     const dataNascitaF = p.data_nascita ? new Date(p.data_nascita).toLocaleDateString('it-IT') : 'Non inserita';
     return `
       <div class="rubrica-patient-card rubrica-patient-card-inattivo" data-id="${p.id}">
-        <div class="rpc-avatar ${p.sesso.toLowerCase()}">${p.sesso}</div>
-        <div class="rpc-details">
-          <h4>${p.nominativo}<span class="rpc-inattivo-badge">📦 Inattivo</span></h4>
-          <p>Nato/a il: <strong>${dataNascitaF}</strong></p>
+        <div class="rubrica-patient-card-main">
+          <div class="rpc-avatar ${p.sesso.toLowerCase()}">${p.sesso}</div>
+          <div class="rpc-details">
+            <h4>${p.nominativo}<span class="rpc-inattivo-badge">📦 Inattivo</span></h4>
+            <p>Nato/a il: <strong>${dataNascitaF}</strong></p>
+          </div>
         </div>
         <button class="rpc-reactivate-btn" type="button" title="Riattiva paziente">♻️</button>
         <button class="rpc-delete-forever-btn" type="button" title="Elimina definitivamente">🗑️</button>
